@@ -1,17 +1,23 @@
 {
   "name": "STREAK - Pattern Prediction",
   "short_name": "STREAK",
-  "description": "Predict patterns, build streaks, win big. A premium betting experience.",
-  "start_url": "/",
+  "description": "Predict patterns, build streaks, win big. A premium pattern game.",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#080a1a",
   "theme_color": "#ff3e6c",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23080a1a' width='100' height='100' rx='20'/><text x='50' y='65' text-anchor='middle' font-size='50'>🔥</text></svg>",
+      "src": "https://fakeimg.pl/192x192/080a1a/ff3e6c/?text=%F0%9F%94%A5&font_size=80",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/png"
+    },
+    {
+      "src": "https://fakeimg.pl/512x512/080a1a/ff3e6c/?text=%F0%9F%94%A5&font_size=200",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ],
   "categories": ["games", "entertainment"]

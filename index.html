@@ -1037,7 +1037,9 @@
 
     const betOptions = [10, 25, 50, 100];
     const choiceCount = 4;
-    const timeLimitSeconds = 10;
+    // Timer adjusts based on pattern difficulty
+    const timeLimitByLevel = { 1: 12, 2: 10, 3: 8, 4: 6 };
+    let timeLimitSeconds = 10;
     const bestStreakKey = "streak-best";
     const totalRoundsKey = "streak-rounds";
     const totalPointsKey = "streak-total-points";
@@ -1335,6 +1337,8 @@
 
     function startTimer() {
       clearTimer();
+      // Set time based on current pattern difficulty
+      timeLimitSeconds = timeLimitByLevel[currentPatternLevel] || 10;
       timeLeft = timeLimitSeconds;
       updateTimerDisplay();
       timerId = setInterval(() => {
@@ -1350,78 +1354,126 @@
       timeoutId = setTimeout(handleTimeout, timeLimitSeconds * 1000);
     }
 
-    function generateSequence() {
-      const hardChance = Math.random() < 0.4;
-      const hardRule = Math.floor(Math.random() * 3);
-      const easyRule = Math.floor(Math.random() * 5);
-      let seq = [];
-      if (!hardChance && easyRule === 0) {
-        // Shape cycle of 3, fixed color
-        const order = [...shapes].sort(() => Math.random() - 0.5);
-        const color = pick(colors);
-        for (let i = 0; i < 5; i++) {
-          seq.push({ shape: order[i % 3], color: color.name });
+    // ====== PATTERN RULES v2 - Mathematical Foundations ======
+    const PatternRules = {
+      // Level 1: Basic sequences
+      repeat: {
+        name: 'Repeat', level: 1,
+        generate: () => {
+          const shape = pick(shapes);
+          const color = pick(colors);
+          return Array(5).fill({ shape, color: color.name });
         }
-      } else if (!hardChance && easyRule === 1) {
-        // Color cycle of 4, fixed shape
-        const order = [...colors].sort(() => Math.random() - 0.5);
-        const shape = pick(shapes);
-        for (let i = 0; i < 5; i++) {
-          seq.push({ shape, color: order[i % 4].name });
+      },
+      alternate2: {
+        name: 'Alternate', level: 1,
+        generate: () => {
+          const [s1, s2] = shuffle(shapes).slice(0, 2);
+          const color = pick(colors);
+          return [0,1,2,3,4].map(i => ({ shape: i % 2 === 0 ? s1 : s2, color: color.name }));
         }
-      } else if (!hardChance && easyRule === 2) {
-        // Alternate shapes, fixed color
-        const pair = [...shapes].sort(() => Math.random() - 0.5).slice(0, 2);
-        const color = pick(colors);
-        for (let i = 0; i < 5; i++) {
-          seq.push({ shape: pair[i % 2], color: color.name });
+      },
+      cycle3: {
+        name: 'Cycle 3', level: 1,
+        generate: () => {
+          const [s1, s2, s3] = shuffle(shapes);
+          const color = pick(colors);
+          return [0,1,2,3,4].map(i => ({ shape: [s1,s2,s3][i % 3], color: color.name }));
         }
-      } else if (!hardChance && easyRule === 3) {
-        // Alternate colors, fixed shape
-        const pair = [...colors].sort(() => Math.random() - 0.5).slice(0, 2);
-        const shape = pick(shapes);
-        for (let i = 0; i < 5; i++) {
-          seq.push({ shape, color: pair[i % 2].name });
+      },
+      // Level 2: Multi-attribute
+      shapeStep: {
+        name: 'Shape Cycles', level: 2,
+        generate: () => {
+          const shapeOrder = shuffle(shapes);
+          const color = pick(colors);
+          return [0,1,2,3,4].map(i => ({ shape: shapeOrder[i % shapeOrder.length], color: color.name }));
         }
-      } else if (!hardChance && easyRule === 4) {
-        // Pair repeat
-        const first = { shape: pick(shapes), color: pick(colors).name };
-        let second = { shape: pick(shapes), color: pick(colors).name };
-        if (second.shape === first.shape && second.color === first.color) {
-          second = { shape: pick(shapes), color: pick(colors).name };
+      },
+      colorStep: {
+        name: 'Color Cycles', level: 2,
+        generate: () => {
+          const shape = pick(shapes);
+          const colorOrder = shuffle(colors);
+          return [0,1,2,3,4].map(i => ({ shape, color: colorOrder[i % colorOrder.length].name }));
         }
-        seq = [first, second, first, second, first];
-      } else if (hardRule === 0) {
-        // Hard mode: shape + color cycles together with offset
-        const shapeOrder = shuffle(shapes);
-        const colorOrder = shuffle(colors);
-        const colorOffset = Math.floor(Math.random() * colorOrder.length);
-        for (let i = 0; i < 5; i++) {
-          const shape = shapeOrder[i % shapeOrder.length];
-          const color = colorOrder[(i + colorOffset) % colorOrder.length].name;
-          seq.push({ shape, color });
+      },
+      bothCycle: {
+        name: 'Both Cycle', level: 2,
+        generate: () => {
+          const shapeOrder = shuffle(shapes);
+          const colorOrder = shuffle(colors);
+          const offset = 1 + Math.floor(Math.random() * 2);
+          return [0,1,2,3,4].map(i => ({ 
+            shape: shapeOrder[i % shapeOrder.length], 
+            color: colorOrder[(i + offset) % colorOrder.length].name 
+          }));
         }
-      } else if (hardRule === 1) {
-        // Hard mode: shape alternates, color cycles every 3
-        const shapePair = shuffle(shapes).slice(0, 2);
-        const colorOrder = shuffle(colors);
-        for (let i = 0; i < 5; i++) {
-          const shape = shapePair[i % 2];
-          const color = colorOrder[i % 3].name;
-          seq.push({ shape, color });
+      },
+      // Level 3: Mirror patterns
+      palindrome: {
+        name: 'Palindrome', level: 3,
+        generate: () => {
+          const [s1, s2, s3] = shuffle(shapes);
+          const color = pick(colors);
+          return [s1, s2, s3, s2, s1].map(shape => ({ shape, color: color.name }));
         }
-      } else {
-        // Hard mode: color mirrors while shape steps forward
-        const shapeOrder = shuffle(shapes);
-        const colorOrder = shuffle(colors).slice(0, 3);
-        const mirror = [...colorOrder, colorOrder[1]];
-        for (let i = 0; i < 5; i++) {
-          const shape = shapeOrder[i % shapeOrder.length];
-          const color = mirror[i % mirror.length].name;
-          seq.push({ shape, color });
+      },
+      colorPalindrome: {
+        name: 'Color Mirror', level: 3,
+        generate: () => {
+          const shape = pick(shapes);
+          const [c1, c2, c3] = shuffle(colors);
+          return [c1, c2, c3, c2, c1].map(c => ({ shape, color: c.name }));
+        }
+      },
+      // Level 4: Complex
+      fibonacci: {
+        name: 'Fibonacci', level: 4,
+        generate: () => {
+          const shapeOrder = shuffle(shapes);
+          const color = pick(colors);
+          const fib = [1, 1, 2, 3, 5];
+          return fib.map(f => ({ shape: shapeOrder[f % shapeOrder.length], color: color.name }));
+        }
+      },
+      arithmetic: {
+        name: 'Arithmetic', level: 4,
+        generate: () => {
+          const shapeOrder = shuffle(shapes);
+          const colorOrder = shuffle(colors);
+          const step = 1 + Math.floor(Math.random() * 2);
+          return [0,1,2,3,4].map(i => ({ 
+            shape: shapeOrder[(i * step) % shapeOrder.length], 
+            color: colorOrder[(i * step) % colorOrder.length].name 
+          }));
         }
       }
-      return seq;
+    };
+
+    let currentPatternLevel = 1;
+    let currentPatternName = '';
+
+    function generateSequence() {
+      // Level distribution weighted toward easier
+      const roll = Math.random();
+      let targetLevel;
+      if (roll < 0.35) targetLevel = 1;
+      else if (roll < 0.60) targetLevel = 2;
+      else if (roll < 0.80) targetLevel = 3;
+      else targetLevel = 4;
+      
+      // Increase difficulty with streak
+      if (streak >= 3) targetLevel = Math.min(4, targetLevel + 1);
+      if (streak >= 6) targetLevel = Math.min(4, targetLevel + 1);
+      
+      const rules = Object.values(PatternRules).filter(r => r.level === targetLevel);
+      const rule = rules[Math.floor(Math.random() * rules.length)];
+      
+      currentPatternLevel = rule.level;
+      currentPatternName = rule.name;
+      
+      return rule.generate();
     }
 
     function renderSequence(seq) {
@@ -1514,7 +1566,9 @@
       renderSequence(seq);
       renderChoices(buildChoiceSet(answer));
       setChoicesDisabled(false);
-      messageEl.innerHTML = "<span>Make a prediction and place your bet before time runs out.</span>";
+      const levelNames = { 1: 'Easy', 2: 'Medium', 3: 'Hard', 4: 'Expert' };
+      const levelColors = { 1: 'var(--accent-3)', 2: 'var(--accent-2)', 3: 'var(--accent-4)', 4: 'var(--accent)' };
+      messageEl.innerHTML = `<span>Level <strong style="color:${levelColors[currentPatternLevel]}">${levelNames[currentPatternLevel]}</strong> — ${currentPatternName}. Make your prediction!</span>`;
       messageEl.classList.remove("glow");
       updateBetPreview();
       updateDoubleOrNothingState();

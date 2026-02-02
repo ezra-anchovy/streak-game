@@ -38,6 +38,22 @@
     }
 
     * { box-sizing: border-box; }
+    
+    /* Premium animations */
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+    }
+    
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(255, 62, 108, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(255, 62, 108, 0.6); }
+    }
+    
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
 
     body {
       margin: 0;
@@ -58,11 +74,12 @@
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 24px;
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadow), 0 0 80px rgba(255, 62, 108, 0.1);
       backdrop-filter: blur(16px);
       padding: clamp(20px, 3vw, 32px);
       position: relative;
       overflow: hidden;
+      animation: float 6s ease-in-out infinite;
     }
 
     .game::before {
@@ -348,6 +365,24 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn.primary::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 200%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      animation: shimmer 3s infinite;
+    }
+    
+    .btn.primary:hover {
+      animation: pulse-glow 1.5s infinite;
+      transform: translateY(-2px) scale(1.02);
     }
 
     .btn.primary:disabled {

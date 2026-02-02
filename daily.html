@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#ff3e6c" />
+  <title>STREAK Daily Challenge</title>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-1: #080a1a;
+      --bg-2: #111831;
+      --accent: #ff3e6c;
+      --accent-2: #2de1ff;
+      --accent-3: #63ff96;
+      --accent-4: #ffc14a;
+      --text: #f8f9ff;
+      --muted: #c8cbe6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Montserrat", sans-serif;
+      background: linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .game {
+      width: min(500px, 100%);
+      background: rgba(255,255,255,0.06);
+      border-radius: 20px;
+      padding: 24px;
+      text-align: center;
+    }
+    h1 { font-family: "Baloo 2", cursive; font-size: 28px; margin-bottom: 4px; }
+    .day-num { color: var(--accent); font-size: 14px; margin-bottom: 16px; }
+    .sequence { display: flex; gap: 8px; justify-content: center; margin: 20px 0; }
+    .slot {
+      width: 60px; height: 60px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 12px;
+      display: grid; place-items: center;
+    }
+    .slot.mystery { background: rgba(255,62,108,0.3); font-size: 24px; }
+    .shape { width: 32px; height: 32px; }
+    .shape.circle { border-radius: 50%; background: currentColor; }
+    .shape.square { background: currentColor; border-radius: 4px; }
+    .shape.triangle { 
+      width: 0; height: 0;
+      border-left: 16px solid transparent;
+      border-right: 16px solid transparent;
+      border-bottom: 28px solid currentColor;
+      background: none;
+    }
+    .choices { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 20px 0; }
+    .choice {
+      padding: 16px;
+      background: rgba(255,255,255,0.08);
+      border: 2px solid transparent;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .choice:hover { background: rgba(255,255,255,0.15); }
+    .choice.selected { border-color: var(--accent-2); background: rgba(45,225,255,0.15); }
+    .choice.correct { border-color: var(--accent-3); background: rgba(99,255,150,0.2); }
+    .choice.wrong { border-color: var(--accent); background: rgba(255,62,108,0.2); opacity: 0.6; }
+    .choice span { font-size: 13px; color: var(--muted); }
+    .btn {
+      padding: 14px 28px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn.primary {
+      background: linear-gradient(120deg, var(--accent), #ff9b5e);
+      color: #1b1020;
+    }
+    .btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn.share {
+      background: rgba(45,225,255,0.2);
+      color: var(--accent-2);
+      border: 1px solid var(--accent-2);
+      margin-top: 12px;
+    }
+    .progress { display: flex; gap: 6px; justify-content: center; margin: 16px 0; }
+    .progress-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+    }
+    .progress-dot.correct { background: var(--accent-3); }
+    .progress-dot.wrong { background: var(--accent); }
+    .progress-dot.current { background: var(--accent-4); animation: pulse 1s infinite; }
+    @keyframes pulse { 50% { transform: scale(1.2); } }
+    .result { margin-top: 20px; padding: 20px; background: rgba(255,255,255,0.08); border-radius: 16px; }
+    .result h2 { font-family: "Baloo 2", cursive; margin-bottom: 12px; }
+    .result .score { font-size: 48px; font-weight: 700; color: var(--accent-3); }
+    .result .share-text { 
+      font-family: monospace; 
+      background: rgba(0,0,0,0.3); 
+      padding: 12px; 
+      border-radius: 8px; 
+      margin: 12px 0;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .hidden { display: none !important; }
+    .message { 
+      padding: 12px; 
+      border-radius: 10px; 
+      background: rgba(255,255,255,0.08);
+      margin-bottom: 16px;
+      min-height: 44px;
+    }
+    .timer { font-size: 20px; font-weight: 600; color: var(--accent-4); }
+    .timer.danger { color: var(--accent); animation: pulse 0.5s infinite; }
+    .already-played { padding: 40px 20px; }
+    .already-played h2 { margin-bottom: 20px; }
+    .countdown { font-size: 24px; color: var(--accent-2); margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <h1>🔥 STREAK Daily</h1>
+    <div class="day-num" id="day-num">Day #1</div>
+    
+    <div id="already-played" class="already-played hidden">
+      <h2>You've already played today!</h2>
+      <div class="share-text" id="past-result"></div>
+      <button class="btn share" onclick="copyResult()">📋 Copy Result</button>
+      <div class="countdown" id="countdown"></div>
+      <p style="color: var(--muted); margin-top: 20px;">Come back tomorrow for a new challenge!</p>
+    </div>
+    
+    <div id="game-area">
+      <div class="progress" id="progress"></div>
+      <div class="timer" id="timer">10s</div>
+      <div class="sequence" id="sequence"></div>
+      <div class="message" id="message">What comes next in the pattern?</div>
+      <div class="choices" id="choices"></div>
+      <button class="btn primary" id="submit" disabled>Submit</button>
+    </div>
+    
+    <div id="result" class="result hidden">
+      <h2>Daily Challenge Complete!</h2>
+      <div class="score" id="final-score">0/6</div>
+      <div class="share-text" id="share-text"></div>
+      <button class="btn share" onclick="copyResult()">📋 Copy & Share</button>
+      <p style="color: var(--muted); margin-top: 16px; font-size: 13px;">
+        <a href="index.html" style="color: var(--accent-2);">Play unlimited mode →</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Seeded random for consistent daily puzzles
+    function seededRandom(seed) {
+      const x = Math.sin(seed++) * 10000;
+      return x - Math.floor(x);
+    }
+    
+    // Get day number since launch (Jan 31, 2026)
+    const LAUNCH_DATE = new Date('2026-01-31');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dayNum = Math.floor((today - LAUNCH_DATE) / (1000 * 60 * 60 * 24)) + 1;
+    const seed = today.getTime();
+    let seedCounter = seed;
+    
+    function rand() {
+      return seededRandom(seedCounter++);
+    }
+    
+    function pick(arr) {
+      return arr[Math.floor(rand() * arr.length)];
+    }
+    
+    function shuffle(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    const shapes = ["circle", "square", "triangle"];
+    const colors = [
+      { name: "red", value: "#ff4d6d" },
+      { name: "blue", value: "#49d3ff" },
+      { name: "green", value: "#7bff8f" },
+      { name: "yellow", value: "#ffd65e" }
+    ];
+    
+    const TOTAL_ROUNDS = 6;
+    const TIME_LIMIT = 15;
+    let currentRound = 0;
+    let results = [];
+    let currentSequence = [];
+    let answer = null;
+    let selectedChoice = null;
+    let timeLeft = TIME_LIMIT;
+    let timerId = null;
+    
+    const storageKey = `streak-daily-${dayNum}`;
+    
+    // Pattern generators (seeded)
+    const patterns = [
+      // Repeat
+      () => {
+        const shape = pick(shapes);
+        const color = pick(colors);
+        return Array(5).fill({ shape, color: color.name });
+      },
+      // Alternate
+      () => {
+        const [s1, s2] = shuffle(shapes).slice(0, 2);
+        const color = pick(colors);
+        return [0,1,2,3,4].map(i => ({ shape: i % 2 === 0 ? s1 : s2, color: color.name }));
+      },
+      // Cycle 3
+      () => {
+        const [s1, s2, s3] = shuffle(shapes);
+        const color = pick(colors);
+        return [0,1,2,3,4].map(i => ({ shape: [s1,s2,s3][i % 3], color: color.name }));
+      },
+      // Color cycle
+      () => {
+        const shape = pick(shapes);
+        const colorOrder = shuffle(colors);
+        return [0,1,2,3,4].map(i => ({ shape, color: colorOrder[i % colorOrder.length].name }));
+      },
+      // Palindrome
+      () => {
+        const [s1, s2, s3] = shuffle(shapes);
+        const color = pick(colors);
+        return [s1, s2, s3, s2, s1].map(shape => ({ shape, color: color.name }));
+      },
+      // Fibonacci-like
+      () => {
+        const shapeOrder = shuffle(shapes);
+        const color = pick(colors);
+        const fib = [1, 1, 2, 3, 5];
+        return fib.map(f => ({ shape: shapeOrder[f % shapeOrder.length], color: color.name }));
+      }
+    ];
+    
+    function checkAlreadyPlayed() {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const data = JSON.parse(saved);
+        document.getElementById('game-area').classList.add('hidden');
+        document.getElementById('already-played').classList.remove('hidden');
+        document.getElementById('past-result').textContent = data.shareText;
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+        return true;
+      }
+      return false;
+    }
+    
+    function updateCountdown() {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      const diff = tomorrow - now;
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((diff % (1000 * 60)) / 1000);
+      document.getElementById('countdown').textContent = 
+        `Next puzzle in ${hours}h ${mins}m ${secs}s`;
+    }
+    
+    function init() {
+      document.getElementById('day-num').textContent = `Day #${dayNum}`;
+      if (checkAlreadyPlayed()) return;
+      renderProgress();
+      nextRound();
+    }
+    
+    function renderProgress() {
+      const el = document.getElementById('progress');
+      el.innerHTML = '';
+      for (let i = 0; i < TOTAL_ROUNDS; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'progress-dot';
+        if (i < results.length) {
+          dot.classList.add(results[i] ? 'correct' : 'wrong');
+        } else if (i === currentRound) {
+          dot.classList.add('current');
+        }
+        el.appendChild(dot);
+      }
+    }
+    
+    function nextRound() {
+      if (currentRound >= TOTAL_ROUNDS) {
+        showResult();
+        return;
+      }
+      
+      selectedChoice = null;
+      document.getElementById('submit').disabled = true;
+      document.getElementById('message').textContent = 'What comes next in the pattern?';
+      
+      // Generate pattern for this round
+      const patternFn = patterns[currentRound % patterns.length];
+      currentSequence = patternFn();
+      answer = currentSequence[4];
+      
+      renderSequence();
+      renderChoices();
+      startTimer();
+    }
+    
+    function renderSequence() {
+      const el = document.getElementById('sequence');
+      el.innerHTML = '';
+      currentSequence.slice(0, 4).forEach(item => {
+        const slot = document.createElement('div');
+        slot.className = 'slot';
+        const shape = document.createElement('div');
+        shape.className = `shape ${item.shape}`;
+        const color = colors.find(c => c.name === item.color);
+        if (item.shape === 'triangle') {
+          shape.style.borderBottomColor = color.value;
+        } else {
+          shape.style.color = color.value;
+        }
+        slot.appendChild(shape);
+        el.appendChild(slot);
+      });
+      const mystery = document.createElement('div');
+      mystery.className = 'slot mystery';
+      mystery.textContent = '?';
+      el.appendChild(mystery);
+    }
+    
+    function renderChoices() {
+      const el = document.getElementById('choices');
+      el.innerHTML = '';
+      
+      // Build choice set
+      const allCombos = shapes.flatMap(s => colors.map(c => ({ shape: s, color: c.name })));
+      const others = shuffle(allCombos.filter(
+        c => !(c.shape === answer.shape && c.color === answer.color)
+      )).slice(0, 3);
+      const choices = shuffle([answer, ...others]);
+      
+      choices.forEach(choice => {
+        const btn = document.createElement('div');
+        btn.className = 'choice';
+        btn.dataset.shape = choice.shape;
+        btn.dataset.color = choice.color;
+        
+        const shape = document.createElement('div');
+        shape.className = `shape ${choice.shape}`;
+        const color = colors.find(c => c.name === choice.color);
+        if (choice.shape === 'triangle') {
+          shape.style.borderBottomColor = color.value;
+        } else {
+          shape.style.color = color.value;
+        }
+        btn.appendChild(shape);
+        
+        const label = document.createElement('span');
+        label.textContent = choice.color;
+        btn.appendChild(label);
+        
+        btn.onclick = () => selectChoice(btn, choice);
+        el.appendChild(btn);
+      });
+    }
+    
+    function selectChoice(btn, choice) {
+      document.querySelectorAll('.choice').forEach(c => c.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedChoice = choice;
+      document.getElementById('submit').disabled = false;
+    }
+    
+    function startTimer() {
+      timeLeft = TIME_LIMIT;
+      updateTimer();
+      timerId = setInterval(() => {
+        timeLeft--;
+        updateTimer();
+        if (timeLeft <= 0) {
+          clearInterval(timerId);
+          handleSubmit(true);
+        }
+      }, 1000);
+    }
+    
+    function updateTimer() {
+      const el = document.getElementById('timer');
+      el.textContent = `${timeLeft}s`;
+      el.classList.toggle('danger', timeLeft <= 3);
+    }
+    
+    function handleSubmit(timeout = false) {
+      clearInterval(timerId);
+      
+      const correct = selectedChoice && 
+        selectedChoice.shape === answer.shape && 
+        selectedChoice.color === answer.color;
+      
+      results.push(correct);
+      
+      // Show feedback
+      document.querySelectorAll('.choice').forEach(c => {
+        const isAnswer = c.dataset.shape === answer.shape && c.dataset.color === answer.color;
+        if (isAnswer) c.classList.add('correct');
+        else if (c.classList.contains('selected')) c.classList.add('wrong');
+        c.onclick = null;
+      });
+      
+      document.getElementById('message').textContent = timeout 
+        ? "⏰ Time's up!" 
+        : (correct ? '✓ Correct!' : '✗ Wrong!');
+      
+      document.getElementById('submit').disabled = true;
+      currentRound++;
+      renderProgress();
+      
+      setTimeout(nextRound, 1500);
+    }
+    
+    function showResult() {
+      document.getElementById('game-area').classList.add('hidden');
+      document.getElementById('result').classList.remove('hidden');
+      
+      const score = results.filter(r => r).length;
+      document.getElementById('final-score').textContent = `${score}/${TOTAL_ROUNDS}`;
+      
+      const emojis = results.map(r => r ? '🟩' : '🟥').join('');
+      const shareText = `STREAK Daily #${dayNum} ${score}/${TOTAL_ROUNDS}\n${emojis}\nhttps://ezra-anchovy.github.io/streak-game/daily.html`;
+      
+      document.getElementById('share-text').textContent = shareText;
+      
+      // Save result
+      localStorage.setItem(storageKey, JSON.stringify({
+        score,
+        results,
+        shareText,
+        playedAt: new Date().toISOString()
+      }));
+    }
+    
+    function copyResult() {
+      const text = document.querySelector('.share-text').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.btn.share');
+        const original = btn.textContent;
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => btn.textContent = original, 2000);
+      });
+    }
+    
+    document.getElementById('submit').onclick = () => handleSubmit();
+    init();
+  </script>
+</body>
+</html>
